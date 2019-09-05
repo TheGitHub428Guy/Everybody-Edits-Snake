@@ -5,8 +5,10 @@
 var BH;
 var movesQueue = [[0], [1], [2], [3]];
 var players = {};
-var ratelimit = 500;
-
+var ratelimit = 5000;
+try {
+clearTimeout(doCommand);
+} catch(err) {}
 // add a callback handler
 connection.addMessageCallback("*", function(m) { // to do: make block handler sense things
     
@@ -43,7 +45,7 @@ connection.addMessageCallback("*", function(m) { // to do: make block handler se
 		case "say": {
 			if (!(/^[.!?]/.test(m.getString(1)))) break; // you can easily add more supported prefixes by changing the regex
 			
-			command = m.getString(1).slice(1).split(" "); //remove first character and split into words list
+			command = m.getString(1).slice(1).toLowerCase().split(" "); //remove first character and split into words list
 			switch (command[0]) {
 				case "help": { // .help [something]
 					switch (command[1]) {
@@ -56,7 +58,7 @@ connection.addMessageCallback("*", function(m) { // to do: make block handler se
                             connection.send("pm", m.getInt(0), "help (command/Mechanic?) - help with command or mechanic, if none included show default help");
                             setTimeout(() => {connection.send("pm", m.getInt(0), "wow this meta");}, 1500);
                         } break;
-                        case "Moving": { // .help move
+                        case "moving": { // .help move
                             connection.send("pm", m.getInt(0), "vote where to move by turning a switch on");
                             setTimeout(() => {connection.send("pm", m.getInt(0), "the switch on the left is to move left, the switch on the right is to move right, etc.");}, 1500);
                             setTimeout(() => {connection.send("pm", m.getInt(0), "you can vote for 2 moves, but you can't vote for the same move twice at once");}, 2500);
@@ -134,7 +136,6 @@ connection.addMessageCallback("*", function(m) { // to do: make block handler se
 		    if (snake.dead) {break;}
 		    if (movesQueue[dir].slice(1).every((a) => {return(a != players[m.getInt(0)]);})) {
 		        movesQueue[dir] = movesQueue[dir].concat([players[m.getInt(0)]]);
-		        console.log("on");
 		        BH.place(1, 0, 8, 17, 385, 
                 "Votes:\\nLeft: " + (movesQueue[0].length - 1)
                 + "\\nRight: " + (movesQueue[1].length - 1)
@@ -142,7 +143,6 @@ connection.addMessageCallback("*", function(m) { // to do: make block handler se
                 + "\\nDown: " + (movesQueue[3].length - 1), 
                 0);
 		    } else {
-		        console.log("no");
 		    }
 		    console.log(movesQueue);
 		} break;
@@ -194,7 +194,7 @@ class SnakeGame {
                                 smiley = 176;
                             }
                         }
-                        BH.place((i[0]-this.snake[0][0]), 0, i[0]+this.gx, i[1]+this.gy, place);
+                        BH.place(0 - (Math.pow(i[0]-this.snake[0][0], 2) + Math.pow(i[1]-this.snake[0][1], 2)), 0, i[0]+this.gx, i[1]+this.gy, place);
                         if ((i[0] == 7) && (i[1] == 7)) {
                             connection.send("smiley", smiley);
                         }
@@ -210,7 +210,7 @@ class SnakeGame {
                 let isTouching = false;
                 snakeNew.unshift([snakeNew[0][0] + ((dir == 1) - (dir === 0)), snakeNew[0][1] + ((dir == 3) - (dir == 2))]);
                 let deleteThis;
-                if ((snakeNew[0][0] == this.fruit[0]) && (snakeNew[0][1] == this.fruit[1])) {
+                if ((snakeNew[0][0] == this.fruit[0]) && (snakeNew[0][1] == this.fruit[1]) && (snakeNew[2].toString() != snakeNew[0].toString())) {
                     this.score += 1;
                     do {
                         this.fruit = [Math.floor(Math.random()*this.width), Math.floor(Math.random()*this.height)];
@@ -261,7 +261,7 @@ class SnakeGame {
             this.dead = true;
             for (var i = [0, 0]; i[1] < height; i[1]++) {
                 for (i[0] = 0; i[0] < width; i[0]++) {
-                    BH.place(Math.random(), 0, i[0]+this.gx, i[1]+this.gy, 0);
+                    BH.place((Math.pow(i[0]-this.snake[0][0], 2) + Math.pow(i[1]-this.snake[0][1], 2)), 0, i[0]+this.gx, i[1]+this.gy, 0);
                 }
             }
         };
@@ -273,7 +273,7 @@ doCommand = function () {
         okay: {
         asdf = movesQueue.slice(0).map((a) => {return [a[0], a.length];});
         asdf.sort((a,b)=>{return (b[1]-a[1]);});
-        if (asdf[0][1] == asdf[1][1]) {setTimeout(doCommand, 100); break okay;}
+        if (asdf[0][1] == asdf[1][1]) {setTimeout(doCommand, ratelimit / 2); break okay;}
         snake.passFrame(asdf[0][0]);
         movesQueue = [[0], [1], [2], [3]];
         setTimeout(doCommand, ratelimit);
