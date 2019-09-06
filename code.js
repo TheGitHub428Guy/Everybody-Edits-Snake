@@ -6,11 +6,27 @@ var BH;
 var movesQueue = [[0], [1], [2], [3]];
 var players = {};
 var ratelimit = 5000;
+
+var tiles = {blank: Array(3).fill([87, 87, 87])}; // blank tile, solid white
+
+tiles.fruit = [[ 87, 1074,   87],
+              [1074, 1074, 1074], // fruit
+               [ 87, 1074,   87]];
+
+tiles.snakeBody = Array(3).fill([14, 14, 14]); // snake body, solid green
+
+tiles.snakeHeadX = [[14, 33, 14],
+                    [14, 14, 14], // moving left/right
+                    [14, 33, 14]];
+
+tiles.snakeHeadY = [[14, 14, 14],
+                    [33, 14, 33], // moving up/down
+                    [14, 14, 14]];
 try {
-clearTimeout(doCommand);
-} catch(err) {}
+clearTimeout(cTime);
+} catch(err) {var cTime;}
 // add a callback handler
-connection.addMessageCallback("*", function(m) { // to do: make block handler sense things
+connection.addMessageCallback("*", function(m) {
     
 	switch(m.type) {
 			
@@ -21,7 +37,7 @@ connection.addMessageCallback("*", function(m) { // to do: make block handler se
 			id = m.getInt(5);
 			// send "init2"
 			connection.send("init2");
-			BH = new BlockHandler(connection, id, width, height, 50);
+			BH = new BlockHandler(connection, id, width, height);
 			BH.deserialise(m);
 		} break;
 			
@@ -33,57 +49,32 @@ connection.addMessageCallback("*", function(m) { // to do: make block handler se
 			playery = 17;
 			Move(playerx, playery);
 			snake = new SnakeGame("dead");
-			connection.send("smiley", 140);
+			connection.send("smiley", 64);
 			//connection.send("say", "hi guys im here");
 		} break;
 			
-		case "m": {
-		    x = m.getDouble(1);
-		    y = m.getDouble(2);
-		} break;
 		
 		case "say": {
 			if (!(/^[.!?]/.test(m.getString(1)))) break; // you can easily add more supported prefixes by changing the regex
 			
-			command = m.getString(1).slice(1).toLowerCase().split(" "); //remove first character and split into words list
+			command = m.getString(1).slice(1).toLowerCase().split(" ");
 			switch (command[0]) {
 				case "help": { // .help [something]
 					switch (command[1]) {
                         default: { // .help
-                            connection.send("pm", m.getInt(0), "i use prefixes . ! and ?; for this example i wont show prefixes");
-                            setTimeout(() => {connection.send("pm", m.getInt(0), "help (command/Mechanic?) - help with command or mechanic, if none included show default help");}, 750);
-                            setTimeout(() => {connection.send("pm", m.getInt(0), "game start/end - start/end a game");}, 1500);
+                            connection.send("pm", m.getInt(0), "i cannot help you");
                         } break;
-                        case "help": { // .help help
-                            connection.send("pm", m.getInt(0), "help (command/Mechanic?) - help with command or mechanic, if none included show default help");
-                            setTimeout(() => {connection.send("pm", m.getInt(0), "wow this meta");}, 1500);
-                        } break;
-                        case "moving": { // .help move
-                            connection.send("pm", m.getInt(0), "vote where to move by turning a switch on");
-                            setTimeout(() => {connection.send("pm", m.getInt(0), "the switch on the left is to move left, the switch on the right is to move right, etc.");}, 1500);
-                            setTimeout(() => {connection.send("pm", m.getInt(0), "you can vote for 2 moves, but you can't vote for the same move twice at once");}, 2500);
-                        } break;
-                        case "game": { // .help game
-                            connection.send("pm", m.getInt(0), "game end - end the current game");
-                            setTimeout(() => {connection.send("pm", m.getInt(0), "game start - start a new game");}, 750);
-                            setTimeout(() => {connection.send("pm", m.getInt(0), "see also: Moving, Fruit");}, 1500);
-                        }
                     }
                 } break;
-				/*case "move": {
-				    var directions = ["left", "right", "up", "down", "l", "r", "u", "d", "<", ">", "^", "v"];
-					dir = directions.findIndex((c) => {return c == command[1].toLowerCase();}) % 4;
-                    log("Someone requested to move " + directions[dir] + "!");
-		            movesQueue = movesQueue.concat([dir]);
-				} break;*/
 				case "game": {
 				    switch (command[1]){
 				        case "start": {
-				            snake = new SnakeGame([[3, 0], [2, 0], [1, 0], [0, 0]], 5, 0, 15, 15, 10, 10);
+				            snake = new SnakeGame([[3, 0], [2, 0], [1, 0], [0, 0]], 10, 10, 170, 70, 3, false);
 				            setTimeout(doCommand, ratelimit);
+				            movesQueue = [[0], [1], [2], [3]];
 				        } break;
 				        case "end": {
-				            snake.end();
+				            //snake.end();
 				        } break;
 				        case "refresh": {
 				            snake.rScreen();
@@ -101,7 +92,56 @@ connection.addMessageCallback("*", function(m) { // to do: make block handler se
 		
 		case "add": {
 		    //setTimeout(() => {connection.send("say", "/givegod " + m.getString(1) + "");}, 1000);
-		    players[m.getInt(0)] = m.getString(2);
+		    players[m.getInt(0)] = [m.getString(2), m.getString(1), Array(5).fill(false), (([66, 106, 146, 186, 226, 266, 306, 346].includes(m.getDouble(4)/16)) && ([16, 45].includes(m.getDouble(5)/16)))];
+		} break;
+		
+		case "m": {
+		    if (([66, 106, 146, 186, 226, 266, 306, 346].includes(m.getDouble(1)/16)) && ([16, 45].includes(m.getDouble(2)/16))) {
+		        let dir = false;
+		        let vote = (v) => {
+		            if (!(movesQueue[v].slice(1).includes(players[m.getInt(0)][0]))) {
+                        movesQueue[v] = movesQueue[v].concat([players[m.getInt(0)][0]]);
+                    } else {
+                        try {
+                            movesQueue[v].splice(movesQueue[v].indexOf(players[m.getInt(0)][0]), 1);
+                        } catch(err) {
+                            console.log(err);
+                        }
+                    }
+		        };
+                if (m.getInt(7)) {
+                    vote((m.getInt(7)+1)/2);
+                    dir = true;
+                }
+                if (m.getInt(8)) {
+                    vote((m.getInt(8)+5)/2);
+                    dir = true;
+                }
+                let teleX = (movesQueue[0].includes(players[m.getInt(0)][0]) * 40) +
+                            (movesQueue[1].includes(players[m.getInt(0)][0]) * 80) +
+                            (movesQueue[2].includes(players[m.getInt(0)][0]) * 160) + 66;
+                let teleY = (movesQueue[3].includes(players[m.getInt(0)][0]) * 29) + 16;
+
+		        if (m.getBoolean(10) || m.getBoolean(9) || players[m.getInt(0)][2][4]) {
+		            console.log("/tp "+players[m.getInt(0)][1]+" 17 24");
+		            connection.send("say", "/tp "+players[m.getInt(0)][1]+" 17 24");
+		            players[m.getInt(0)][3] = false;
+		        } else {
+                    console.log("/tp "+[players[m.getInt(0)][1], teleX, teleY].join(" "));
+		            connection.send("say", "/tp "+[players[m.getInt(0)][1], teleX, teleY].join(" "));
+		            players[m.getInt(0)][3] = true;
+		        }
+		        console.log(movesQueue);
+            } else if ([(m.getDouble(1)/16), (m.getDouble(2)/16)].join(" ") == "20 24") {
+                let teleX = (movesQueue[0].includes(players[m.getInt(0)][0]) * 40) +
+                            (movesQueue[1].includes(players[m.getInt(0)][0]) * 80) +
+                            (movesQueue[2].includes(players[m.getInt(0)][0]) * 160) + 66;
+                let teleY = (movesQueue[3].includes(players[m.getInt(0)][0]) * 29) + 16;
+                console.log("/tp "+[players[m.getInt(0)][1], teleX, teleY].join(" "));
+		        connection.send("say", "/tp "+[players[m.getInt(0)][1], teleX, teleY].join(" "));
+		        players[m.getInt(0)][3] = true;
+            }
+            players[m.getInt(0)][2] = [(m.getInt(7) == -1), (m.getInt(7) == 1), (m.getInt(8) == -1), (m.getInt(8) == 1), (m.getBoolean(10) || m.getBoolean(9))];
 		} break;
 		
 		case "left": {
@@ -127,25 +167,6 @@ connection.addMessageCallback("*", function(m) { // to do: make block handler se
 		case 'bc': case 'bn': case 'bs': case 'lb': case 'pt': case 'ts': case 'wp': {
 			BH.block(m);
 		} break;
-		
-		case 'ps': {
-		    dir = m.getInt(2);
-		    if (dir == -1) {break;}
-		    if (!(m.getBoolean(3))) {break;}
-		    //console.log(movesQueue[dir].find((a) => {return(a == m.getInt(0));}));
-		    if (snake.dead) {break;}
-		    if (movesQueue[dir].slice(1).every((a) => {return(a != players[m.getInt(0)]);})) {
-		        movesQueue[dir] = movesQueue[dir].concat([players[m.getInt(0)]]);
-		        BH.place(1, 0, 8, 17, 385, 
-                "Votes:\\nLeft: " + (movesQueue[0].length - 1)
-                + "\\nRight: " + (movesQueue[1].length - 1)
-                + "\\nUp: " + (movesQueue[2].length - 1)
-                + "\\nDown: " + (movesQueue[3].length - 1), 
-                0);
-		    } else {
-		    }
-		    console.log(movesQueue);
-		} break;
 	}
 });
 
@@ -158,25 +179,42 @@ function Move(x, y) {
 }
 
 class SnakeGame {
-    constructor(snake, fx, fy, width, height, gx, gy) {
+    constructor(snake, width, height, gx, gy, scale, movingAxis) {
         this.width = width;
         this.height = height;
         this.snake = snake;
         this.initLength = snake.length;
-        this.fruit = [fx, fy];
+        this.fruit = [0, 0];
         this.score = 0;
         this.gx = gx;
         this.gy = gy;
         this.dead = (snake == "dead");
+        this.scale = (typeof scale == 'undefined') ? 1 : scale;
+        this.movingAxis = movingAxis;
+        this.lastVotes = [0, 0, 0, 0]
+        var isTouching = false;
+        do {
+            this.fruit = [Math.floor(Math.random()*this.width), Math.floor(Math.random()*this.height)];
+            for (var i = 0;i < this.snake.length;i++) {
+                if ((snake[i][0] == this.fruit[0]) && (snake[i][1] == this.fruit[1])) {
+                    isTouching = true;
+                }
+            }
+        } while (isTouching);
         this.rScreen = function () {
             var i;
-            var f = (a) => {return (a[0] == i[0]) && (a[1] == i[1]);};
+            var f = (a) => {return (a[0] == Math.floor(i[0] / this.scale)) && (a[1] == Math.floor(i[1] / this.scale));};
             if (!this.dead) {
-                for (i = [0, 0]; i[1] < height; i[1]++) {
-                    for (i[0] = 0; i[0] < width; i[0]++) {
+                for (i = [0, 0]; i[1] < height * this.scale; i[1] += (1)) {
+                    for (i[0] = 0; i[0] < width * this.scale; i[0] += (1)) {
                         let place = [this.fruit].concat(this.snake).findIndex(f);
-                        let smiley;
-                        switch(place){
+                        let eyes = [[0, 1], [2, 1]];
+                        let h = (this.snake[1][0] == this.snake[0][0]);
+                        place = [tiles.blank, tiles.fruit, ((h) ? tiles.snakeHeadY : tiles.snakeHeadX)][place + 1];
+                        if (typeof place == "undefined") {
+                            place = tiles.snakeBody;
+                        }
+                        /*switch(place){
                             case -1:{
                                 place = 1088;
                                 smiley = 141;
@@ -193,28 +231,32 @@ class SnakeGame {
                                 place = 14;
                                 smiley = 176;
                             }
-                        }
-                        BH.place(0 - (Math.pow(i[0]-this.snake[0][0], 2) + Math.pow(i[1]-this.snake[0][1], 2)), 0, i[0]+this.gx, i[1]+this.gy, place);
-                        if ((i[0] == 7) && (i[1] == 7)) {
-                            connection.send("smiley", smiley);
+                        }*/
+                        BH.place(0 - (Math.pow(i[0]-this.snake[0][0]*this.scale, 2) + Math.pow(i[1]-this.snake[0][1]*this.scale, 2)), 0, i[0]+this.gx, i[1]+this.gy, place[i[1] % this.scale][i[0] % this.scale]);
+                    }
+                }
+                for (i = [0, 0, 0]; i[0] < 4; i[0]++) {
+                    for (i[1] = 0; i[1] < 60; i[1]++) {
+                        for (i[2] = 0; i[2] < 3; i[2]++) {
+                            BH.place(Math.random(), 0, 180 + i[1], 107 + (i[0] * 6) + i[2], ((Math.floor(i[1] / 3) < this.lastVotes[i[0]]) ? 87 : 0))
                         }
                     }
                 }
             }
         };
         this.rScreen();
-        this.fun = function (a) {return (a[0] == this.fruit[0]) && (a[1] == this.fruit[1]);};
-        this.passFrame = function (dir) {
+        this.passFrame = function (dir, lastVotes) {
             if (!this.dead) {
                 let snakeNew = this.snake.slice(0);
-                let isTouching = false;
+                console.log(this.lastVotes = lastVotes);
+                isTouching = false;
                 snakeNew.unshift([snakeNew[0][0] + ((dir == 1) - (dir === 0)), snakeNew[0][1] + ((dir == 3) - (dir == 2))]);
                 let deleteThis;
                 if ((snakeNew[0][0] == this.fruit[0]) && (snakeNew[0][1] == this.fruit[1]) && (snakeNew[2].toString() != snakeNew[0].toString())) {
                     this.score += 1;
                     do {
                         this.fruit = [Math.floor(Math.random()*this.width), Math.floor(Math.random()*this.height)];
-                        for (var i = 0;i < snakeNew;i++) {
+                        for (var i = 0;i < snakeNew.length;i++) {
                             if ((snakeNew[i][0] == this.fruit[0]) && (snakeNew[i][1] == this.fruit[1])) {
                                 isTouching = true;
                             }
@@ -250,6 +292,7 @@ class SnakeGame {
                     }
                 }
                 this.snake = snakeNew.slice(0);
+                this.movingAxis = (dir > 1);
                 this.rScreen();
                 return deleteThis;
             } else {
@@ -259,9 +302,11 @@ class SnakeGame {
         };
         this.end = function () {
             this.dead = true;
-            for (var i = [0, 0]; i[1] < height; i[1]++) {
-                for (i[0] = 0; i[0] < width; i[0]++) {
-                    BH.place((Math.pow(i[0]-this.snake[0][0], 2) + Math.pow(i[1]-this.snake[0][1], 2)), 0, i[0]+this.gx, i[1]+this.gy, 0);
+            clearTimeout(cTime);
+            setTimeout(function(){snake = new SnakeGame([[3, 0], [2, 0], [1, 0], [0, 0]], 10, 10, 170, 70, 3, false); setTimeout(doCommand, ratelimit); movesQueue = [[0], [1], [2], [3]];}, 10000)
+            for (var i = [0, 0]; i[1] < (this.height * this.scale); i[1]++) {
+                for (i[0] = 0; i[0] < (this.width * this.scale); i[0]++) {
+                    BH.place((Math.pow(i[0]-(this.snake[0][0]*this.scale), 2) + Math.pow(i[1]-(this.snake[0][1]*this.scale), 2)), 0, i[0]+this.gx, i[1]+this.gy, 87);
                 }
             }
         };
@@ -271,22 +316,27 @@ class SnakeGame {
 doCommand = function () {
     try {
         okay: {
-        asdf = movesQueue.slice(0).map((a) => {return [a[0], a.length];});
+        asdf = movesQueue.slice(0).map((a) => {return [a[0], a.length-1];});
+        fdsa = [asdf[0][1], asdf[1][1], asdf[2][1], asdf[3][1]];
         asdf.sort((a,b)=>{return (b[1]-a[1]);});
-        if (asdf[0][1] == asdf[1][1]) {setTimeout(doCommand, ratelimit / 2); break okay;}
-        snake.passFrame(asdf[0][0]);
+        if ((asdf[0][1] == asdf[1][1]) || (BH.nextTick !== null && BH.flusher !== null)) {cTime = setTimeout(doCommand, ratelimit / 2); break okay;}
+        snake.passFrame(asdf[0][0], fdsa);
         movesQueue = [[0], [1], [2], [3]];
-        setTimeout(doCommand, ratelimit);
-        BH.place(1, 0, 8, 17, 385, 
-        "Votes:\\nLeft: " + (movesQueue[0].length - 1)
-        + "\\nRight: " + (movesQueue[1].length - 1)
-        + "\\nUp: " + (movesQueue[2].length - 1)
-        + "\\nDown: " + (movesQueue[3].length - 1), 
-        0);
+        for (const [key, val] of Object.entries(players)) {
+            if (val[3]) {
+                connection.send("say", "/tp "+val[1]+" 66 16");
+            }
+        }
+        cTime = setTimeout(doCommand, ratelimit);
         }
     } catch(err) {
-        console.log(err)
+        console.log(err);
     }
 };
 
-
+try {
+    snake = new SnakeGame([[3, 0], [2, 0], [1, 0], [0, 0]], 10, 10, 170, 70, 3, false);
+    setTimeout(doCommand, ratelimit); movesQueue = [[0], [1], [2], [3]];
+} catch(err) {
+    console.log(err)
+}
