@@ -238,7 +238,7 @@ class SnakeGame {
                 for (i = [0, 0, 0]; i[0] < 4; i[0]++) {
                     for (i[1] = 0; i[1] < 60; i[1]++) {
                         for (i[2] = 0; i[2] < 3; i[2]++) {
-                            BH.place(Math.random(), 0, 180 + i[1], 107 + (i[0] * 6) + i[2], ((Math.floor(i[1] / 3) < this.lastVotes[i[0]]) ? 87 : 0))
+                            BH.place(Math.random(), 0, 180 + i[1], 107 + (i[0] * 6) + i[2], ((Math.floor(i[1] / 3) < this.lastVotes[i[0]]) ? 87 : 0));
                         }
                     }
                 }
@@ -254,21 +254,8 @@ class SnakeGame {
                 let deleteThis;
                 if ((snakeNew[0][0] == this.fruit[0]) && (snakeNew[0][1] == this.fruit[1]) && (snakeNew[2].toString() != snakeNew[0].toString())) {
                     this.score += 1;
-                    do {
-                        this.fruit = [Math.floor(Math.random()*this.width), Math.floor(Math.random()*this.height)];
-                        for (var i = 0;i < snakeNew.length;i++) {
-                            if ((snakeNew[i][0] == this.fruit[0]) && (snakeNew[i][1] == this.fruit[1])) {
-                                isTouching = true;
-                            }
-                        }
-                    } while (isTouching);
                 }
                 deleteThis = snakeNew.slice(this.initLength + this.score);
-                /*for (var i = 0; i < deleteThis.length; i++) {
-                    BH.place(0, 0, deleteThis[i][0]+this.gx, deleteThis[i][1]+this.gy, 1088);
-                }
-                BH.place(0, 0, snakeNew[0][0]+this.gx, snakeNew[0][1]+this.gy, 19);
-                BH.place(0, 0, snakeNew[1][0]+this.gx, snakeNew[1][1]+this.gy, 14);*/
                 snakeNew = snakeNew.slice(0, this.initLength + this.score);
                 if ((snakeNew[0][0] < 0) || (snakeNew[0][0] >= this.width)) {
                     log("ran into vert wall");
@@ -282,14 +269,25 @@ class SnakeGame {
                         snakeNew.reverse();
                         if ((snakeNew[0][0] == this.fruit[0]) && (snakeNew[0][1] == this.fruit[1])) {
                             this.score += 1;
-                            while (snakeNew.some(this.fun)) {
-                                this.fruit = [Math.floor(Math.random()*this.width), Math.floor(Math.random()*this.height)];
-                            }
                         }
                     } else {
                         log("ran into self");
                         this.end();
                     }
+                }
+                for (var i = 0;i < snakeNew.length;i++) {
+                    if ((snakeNew[i].toString() == this.fruit.toString())) {
+                        isTouching = true;
+                    }
+                }
+                while (isTouching) {
+                        this.fruit = [Math.floor(Math.random()*this.width), Math.floor(Math.random()*this.height)];
+                        isTouching = false;
+                        for (i = 0;i < snakeNew.length;i++) {
+                            if ((snakeNew[i].toString() == this.fruit.toString())) {
+                                isTouching = true;
+                            }
+                        }
                 }
                 this.snake = snakeNew.slice(0);
                 this.movingAxis = (dir > 1);
@@ -303,7 +301,7 @@ class SnakeGame {
         this.end = function () {
             this.dead = true;
             clearTimeout(cTime);
-            setTimeout(function(){snake = new SnakeGame([[3, 0], [2, 0], [1, 0], [0, 0]], 10, 10, 170, 70, 3, false); setTimeout(doCommand, ratelimit); movesQueue = [[0], [1], [2], [3]];}, 10000)
+            setTimeout(function(){snake = new SnakeGame([[3, 0], [2, 0], [1, 0], [0, 0]], 10, 10, 170, 70, 3, false); setTimeout(doCommand, ratelimit); movesQueue = [[0], [1], [2], [3]];}, 10000);
             for (var i = [0, 0]; i[1] < (this.height * this.scale); i[1]++) {
                 for (i[0] = 0; i[0] < (this.width * this.scale); i[0]++) {
                     BH.place((Math.pow(i[0]-(this.snake[0][0]*this.scale), 2) + Math.pow(i[1]-(this.snake[0][1]*this.scale), 2)), 0, i[0]+this.gx, i[1]+this.gy, 87);
