@@ -6,6 +6,8 @@ var BH;
 var movesQueue = [[0], [1], [2], [3]];
 var players = {};
 var ratelimit = 5000;
+var framerate = 1500; // ms between each frames
+var tillNextMove = 2; // frames until next move
 
 var tiles = {blank: Array(3).fill("¯¯¯")}; // blank tile, solid white
 
@@ -21,26 +23,26 @@ tiles.fruit = ["¯,¯",
 // ђђђ
 // wђw
 
-tiles.snakeBody = [Array(3).fill("jjj"), // snake body, solid green
-                   Array(3).fill("VVV")]; // snake body, charged, solid cyan
+tiles.snakeBody = [Array(3).fill("..."), // snake body, solid green
+                   Array(3).fill("jjj")]; // snake body, charged, solid yellow
 
-tiles.snakeHeadX = [["jAj",
-                     "jjj", // moving left/right
-                     "jAj"],
+tiles.snakeHeadX = [[".A.",
+                     "...", // moving left/right
+                     ".A."],
                      
-                    ["VAV",
-                     "VVV", // moving left/right, charged
-                     "VAV"]];
+                    ["jAj",
+                     "jjj", // moving left/right, charged
+                     "jAj"]];
 
 
 
-tiles.snakeHeadY = [["jjj",
-                     "AjA", // moving up/down
-                     "jjj"],
+tiles.snakeHeadY = [["...",
+                     "A.A", // moving up/down
+                     "..."],
                      
-                    ["VVV",
-                     "AVA", // moving up/down, charged
-                     "VVV"]];
+                    ["jjj",
+                     "AjA", // moving up/down, charged
+                     "jjj"]];
 
 tiles.numbers = [["¯¯¯",
                   "¯ ¯", //0
@@ -88,9 +90,7 @@ tiles.numbers = [["¯¯¯",
 var snake;
 
 var funthing = (m) => {players[m.getInt(0)] = [m.getString(2), m.getString(1), Array(5).fill(false), (([66, 106, 146, 186, 226, 266, 306, 346].includes(m.getDouble(4)/16)) && ([16, 45].includes(m.getDouble(5)/16)))];};
-try {
-clearTimeout(cTime);
-} catch(err) {var cTime;}
+
 // add a callback handler
 connection.addMessageCallback("*", function(m) {
     
@@ -150,7 +150,7 @@ connection.addMessageCallback("*", function(m) {
 				    }
 				} break;*/ // now automated
 				default: {
-				    connection.send("pm", m.getInt(0), "unknown command. type .help, !help or ?help for commands");
+				    connection.send("pm", m.getInt(0), "unknown command. help is the only command rn lol");
 				}
 			}
 		} break;
@@ -274,7 +274,7 @@ class SnakeGame {
                         let place = [this.fruit].concat(this.snake).findIndex(f);
                         let eyes = [[0, 1], [2, 1]];
                         let h = (this.snake[1][0] == this.snake[0][0]);
-                        let tile = [tiles.blank, tiles.fruit, ((h) ? tiles.snakeHeadY[0+(this.energy > 0)] : tiles.snakeHeadX[0+(this.energy > 0)]), ...Array(Math.floor(this.energy)).fill(tiles.snakeBody[1])][place + 1];
+                        let tile = [tiles.blank, tiles.fruit, ((h) ? tiles.snakeHeadY[0+(this.energy > 0)] : tiles.snakeHeadX[0+(this.energy > 0)]), ...Array((this.energy > 1) ? Math.floor(this.energy - 1) : 0).fill(tiles.snakeBody[1])][place + 1];
                         if (typeof tile == "undefined") {
                             tile = tiles.snakeBody[0];
                         }
@@ -312,6 +312,10 @@ class SnakeGame {
             }
         };
         this.rScreen();
+        this.eat = function () {
+            this.score += 1;
+            this.energy = Math.min(this.energy + 2, this.initLength + this.score);
+        };
         this.passFrame = function (dir, lastVotes) {
             if (!this.dead) {
                 let snakeNew = this.snake.slice(0);
@@ -319,8 +323,13 @@ class SnakeGame {
                 isTouching = false;
                 snakeNew.unshift([snakeNew[0][0] + ((dir == 1) - (dir === 0)), snakeNew[0][1] + ((dir == 3) - (dir == 2))]);
                 let deleteThis;
+                if (this.energy > 0) {
+                    this.energy -= 0.1;
+                } else {
+                    this.end();
+                }
                 if ((snakeNew[0][0] == this.fruit[0]) && (snakeNew[0][1] == this.fruit[1]) && (snakeNew[2].toString() != snakeNew[0].toString())) {
-                    this.score += 1;
+                    this.eat();
                 }
                 deleteThis = snakeNew.slice(this.initLength + this.score);
                 snakeNew = snakeNew.slice(0, this.initLength + this.score);
@@ -335,7 +344,7 @@ class SnakeGame {
                         snakeNew = this.snake.slice(0);
                         snakeNew.reverse();
                         if ((snakeNew[0][0] == this.fruit[0]) && (snakeNew[0][1] == this.fruit[1])) {
-                            this.score += 1;
+                            this.eat();
                         }
                     } else {
                         log("ran into self");
@@ -368,8 +377,7 @@ class SnakeGame {
         };
         this.end = function () {
             this.dead = true;
-            clearTimeout(cTime);
-            setTimeout(start, 5000);
+            tillNextMove = 2;
             for (var i = [0, 0]; i[1] < (this.height * this.scale); i[1]++) {
                 for (i[0] = 0; i[0] < (this.width * this.scale); i[0]++) {
                     BH.place((Math.pow(i[0]-(this.snake[0][0]*this.scale), 2) + Math.pow(i[1]-(this.snake[0][1]*this.scale), 2)), 0, i[0]+this.gx, i[1]+this.gy, tiles.blank[1].charCodeAt(0) - 32);
@@ -381,11 +389,12 @@ class SnakeGame {
 
 doCommand = function () {
     try {
+        if (!snake.dead) {
         okay: {
         asdf = movesQueue.slice(0).map((a) => {return [a[0], a.length-1];});
         fdsa = [asdf[0][1], asdf[1][1], asdf[2][1], asdf[3][1]];
         asdf.sort((a,b)=>{return (b[1]-a[1]);});
-        if ((asdf[0][1] == asdf[1][1]) || (BH.nextTick !== null && BH.flusher !== null)) {if (!snake.dead) {cTime = setTimeout(doCommand, ratelimit / 2)}; break okay;}
+        if ((asdf[0][1] == asdf[1][1]) || (BH.nextTick !== null && BH.flusher !== null)) {tillNextMove = 1; break okay;}
         snake.passFrame(asdf[0][0], fdsa);
         movesQueue = [[0], [1], [2], [3]];
         for (const [key, val] of Object.entries(players)) {
@@ -393,17 +402,21 @@ doCommand = function () {
                 connection.send("say", "/tp "+val[1]+" 66 16");
             }
         }
-        cTime = setTimeout(doCommand, ratelimit);
         }
+        } else {
+            snake = new SnakeGame([[5, 5], [4, 5]], 10, 10, 170, 70, 3, false);
+            movesQueue = [[0], [1], [2], [3]];
+        }
+        tillNextMove = 2;
     } catch(err) {
         console.log(err);
     }
 };
-
-start = ()=>{try {
-    snake = new SnakeGame([[5, 5], [4, 5]], 10, 10, 170, 70, 3, false);
-    setTimeout(doCommand, ratelimit); movesQueue = [[0], [1], [2], [3]];
-} catch(err) {
-    console.log(err)
-}};
-setTimeout(start, 5000)
+frame = ()=>{
+    if (tillNextMove > 0) {
+        tillNextMove -= 1;
+    } else {
+        doCommand();
+    };
+};
+snake = new SnakeGame("dead")
