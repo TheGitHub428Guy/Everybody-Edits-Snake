@@ -23,6 +23,10 @@ tiles.fruit = ["¯,¯",
 // ђђђ
 // wђw
 
+tiles.oob = ["gAg",
+             "AgA", // out of bounds
+             "gAg"];
+
 tiles.snakeBody = [Array(3).fill("..."), // snake body, solid green
                    Array(3).fill("jjj")]; // snake body, charged, solid yellow
 
@@ -267,14 +271,17 @@ class SnakeGame {
         } while (isTouching);
         this.rScreen = function () {
             var i;
-            var f = (a) => {return (a[0] == Math.floor(i[0] / this.scale)) && (a[1] == Math.floor(i[1] / this.scale));};
+            var cam;
+            var f = (a) => {return (a[0] == cam[0]) && (a[1] == cam[1]);};
+            var o = () => {return ((cam[1] < 0) || (cam[1] >= this.height)) || ((cam[0] < 0) || (cam[0] >= this.width));};
             if (!this.dead) {
                 for (i = [0, 0]; i[1] < height * this.scale; i[1] += (1)) {
                     for (i[0] = 0; i[0] < width * this.scale; i[0] += (1)) {
+                        cam = [Math.floor((i[0] / this.scale) + this.snake[0][0] - 5), Math.floor((i[1] / this.scale) + this.snake[0][1] - 5)];
                         let place = [this.fruit].concat(this.snake).findIndex(f);
-                        let eyes = [[0, 1], [2, 1]];
+                        //let eyes = [[0, 1], [2, 1]];
                         let h = (this.snake[1][0] == this.snake[0][0]);
-                        let tile = [tiles.blank, tiles.fruit, ((h) ? tiles.snakeHeadY[0+(this.energy > 0)] : tiles.snakeHeadX[0+(this.energy > 0)]), ...Array((this.energy > 1) ? Math.floor(this.energy - 1) : 0).fill(tiles.snakeBody[1])][place + 1];
+                        let tile = [((o()) ? tiles.oob : tiles.blank), tiles.fruit, ((h) ? tiles.snakeHeadY[0+(this.energy > 0)] : tiles.snakeHeadX[0+(this.energy > 0)]), ...Array((this.energy > 1) ? Math.floor(this.energy - 1) : 0).fill(tiles.snakeBody[1])][place + 1];
                         if (typeof tile == "undefined") {
                             tile = tiles.snakeBody[0];
                         }
@@ -419,4 +426,10 @@ frame = ()=>{
         doCommand();
     };
 };
+/*start = ()=>{try {
+    snake = new SnakeGame([[5, 5], [4, 5]], 10, 10, 170, 70, 3, false);
+    movesQueue = [[0], [1], [2], [3]];
+} catch(err) {
+    console.log(err)
+}};*/
 snake = new SnakeGame("dead")
