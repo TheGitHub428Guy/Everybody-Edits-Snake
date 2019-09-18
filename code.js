@@ -1,4 +1,6 @@
-// My bot - please be gentle
+// Slow Snake bot - please be gentle
+// Recently I added Gamepad control - i can now make the bot move around and change smileys. great
+//
 // ~by 428
 // ~template by SirJosh3917/ninjasupeatsninja
 
@@ -92,6 +94,7 @@ tiles.numbers = [["¯¯¯",
                   "   ", //none
                   "   "]];
 var snake;
+var gamepads;
 
 var funthing = (m) => {players[m.getInt(0)] = [m.getString(2), m.getString(1), Array(5).fill(false), (([66, 106, 146, 186, 226, 266, 306, 346].includes(m.getDouble(4)/16)) && ([16, 45].includes(m.getDouble(5)/16)))];};
 
@@ -105,6 +108,10 @@ connection.addMessageCallback("*", function(m) {
 			width = m.getInt(18);
 			height = m.getInt(19);
 			id = m.getInt(5);
+			smiley = m.getInt(6);
+			
+			playerX = m.getDouble(10) / 16;
+			playerY = m.getDouble(11) / 16;
 			// send "init2"
 			connection.send("init2");
 			BH = new BlockHandler(connection, id, width, height);
@@ -113,7 +120,7 @@ connection.addMessageCallback("*", function(m) {
 			
 		// on "init2"
 		case "init2": {
-			log("init2 recieved!");
+			log("we on");
 			connection.send("god", true);
 			playerx = 17;
 			playery = 17;
@@ -237,6 +244,16 @@ log("Sending init!");
 // send "init"
 connection.send("init");
 
+window.addEventListener("gamepadconnected", function(e) {
+    gamepads = navigator.getGamepads();
+  console.log("gamer time.");
+});
+
+window.addEventListener("gamepaddisconnected", function(e) {
+    gamepads = navigator.getGamepads();
+  console.log("no more gamer time.");
+});
+
 function Move(x, y) {
     connection.send("m", Math.max(0, Math.min(x, width))*16, Math.max(0, Math.min(y, height))*16, 0, 0, 0, 0, 0, 0, 0, false, false, 0);
 }
@@ -270,6 +287,7 @@ class SnakeGame {
             }
         } while (isTouching);
         this.rScreen = function () {
+            BH.clearQueue();
             var i;
             var cam;
             var f = (a) => {return (a[0] == cam[0]) && (a[1] == cam[1]);};
@@ -432,4 +450,61 @@ frame = ()=>{
 } catch(err) {
     console.log(err)
 }};*/
+velocity = [0, 0];
+bPressed = [false, false];
+
+function readGamepad () {
+    try {
+        if (gamepads[0].buttons[12].pressed) {
+            velocity[1] -= 0.05;
+        }
+        if (gamepads[0].buttons[13].pressed) {
+            velocity[1] += 0.05;
+        }
+        if (gamepads[0].buttons[14].pressed) {
+            velocity[0] -= 0.05;
+        }
+        if (gamepads[0].buttons[15].pressed) {
+            velocity[0] += 0.05;
+        };
+        
+        if (gamepads[0].buttons[2].pressed) {
+            velocity = [((gamepads[0].axes[0]) + (gamepads[0].axes[2])) / 10, ((gamepads[0].axes[1]) + (gamepads[0].axes[3])) / 10];
+        }
+        if (gamepads[0].buttons[3].pressed) {
+            velocity = [((gamepads[0].axes[0]) + (gamepads[0].axes[2])) / 2, ((gamepads[0].axes[1]) + (gamepads[0].axes[3])) / 2];
+        }
+        playerX = Math.max(0, Math.min((playerX + velocity[0]), width));
+        playerY = Math.max(0, Math.min((playerY + velocity[1]), height));
+        if (playerX == 0 || playerX == width) {
+            velocity[0] *= -1;
+            smiley = Math.floor(Math.random() * 4);
+        }
+        if (playerY == 0 || playerY == height) {
+            velocity[1] *= -1;
+            smiley = Math.floor(Math.random() * 4);
+        }
+        if (gamepads[0].buttons[4].pressed && !(bPressed[0])) {
+            smiley = (smiley - 1) % 4;
+        }
+        if (gamepads[0].buttons[5].pressed && !(bPressed[1])) {
+            smiley = (smiley + 1) % 4;
+        }
+        bPressed = [gamepads[0].buttons[4].pressed, gamepads[0].buttons[5].pressed];
+        Move(playerX, playerY);
+        if (gamepads[0].buttons[0].pressed) {
+            BH.place(0, 0, Math.floor(playerX + 0.5), Math.floor(playerY + 0.5), [1088, 9, 182, 12, 1018, 13, 14, 15, 10, 11][Math.floor(Math.random() * 10)]);
+        }
+        if (gamepads[0].buttons[1].pressed) {
+            BH.place(0, 0, Math.floor(playerX + 0.5), Math.floor(playerY + 0.5), 0);
+        }
+        connection.send("smiley", smiley);
+    } catch(err) {
+    }
+}
+
+function startUp () { // to start the bot, go into console and type "startUp()"
+	setInterval(()=>{frame()}, framerate)
+	setInterval(()=>{readGamepad()}, 20);
+}
 snake = new SnakeGame("dead")
