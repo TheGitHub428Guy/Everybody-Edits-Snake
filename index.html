@@ -1,3 +1,6 @@
+<html>
+<body>
+<script>
 // Remade Snakebot Code - help me
 //
 // ~by 428
@@ -13,13 +16,12 @@
 // red: 6
 
 // to anyone offended by me using mathematical operations (+, -, *) with booleans and being an idiot with strings and regexes, don't look at this code
-var menu = document.getElementsByClassName("menu")[0].childNodes[1];
-if (document.getElementById("sprscreen") !== null) {
-    document.getElementById("sprscreen").parentNode.parentNode.remove();
-}
-menu.appendChild(document.createElement("tr")).innerHTML = "<td id=\"sprscreen\"></td>";
-//menu.innerHTML = menu.innerHTML.replace(/(<tr><td id=\"sprscreen\".*\/tr>)?$/, "<tr><td id=\"sprscreen\"></td></tr>");
+var menu = document.getElementsByTagName("body")[0];
+menu.innerHTML = menu.innerHTML.replace(/(<tr><td id=\"sprscreen\".*\/tr>)?$/, "<div id=\"sprscreen\"></div>");
 var sprscreen = document.getElementById("sprscreen");
+
+menu.style.backgroundColor = "#404040";
+
 sprscreen.style.color = "white";
 sprscreen.style.fontFamily = "Courier New";
 sprscreen.style.fontSize = "8px";
@@ -40,8 +42,8 @@ palette = {
     [ "!EE"]: 1022,
     ["\"EE"]: 1088,
     [ "#EE"]: 143,
-    [ "$EE"]: 14,
-    [ "%EE"]: 74,
+    [ "$EE"]: 19,
+    [ "%EE"]: 14,
     [ "&EE"]: 12,
     [ "'EE"]: 70,
 };
@@ -177,14 +179,16 @@ spr = {
 })(); // make the function to update snake and then do that thing
 
 class SnakeGame {
-    constructor(snake, width, height) {
+    constructor(snake, width, height, gx, gy) {
         this.width = width;
         this.height = height;
         this.snake = snake;
         this.initLength = snake.length;
         this.fruit = [0, 0];
         this.score = 0;
+        this.gx = gx;
         this.time = 0;
+        this.gy = gy;
         this.dead = (snake == "dead");
         this.energy = 2;
         this.dir = (this.initLength > 1) ? [this.snake[0][0] - this.snake[1][0], this.snake[0][1] - this.snake[1][1]] : [1, 0];
@@ -284,10 +288,9 @@ class SnakeGame {
     }
 } // this should work but also at the same time probably shouldn't
 
-
 nextFrame = (x, y)=>{
     if (snake.dead) {
-        snake = new SnakeGame([[1, 0], [0, 0]], 10, 10);
+        snake = new SnakeGame([[1, 0], [0, 0]], 10, 10, 180, 80);
     } else {
         if (x || y) {
             snake.move([x, y]);
@@ -297,20 +300,14 @@ nextFrame = (x, y)=>{
         snake.addTime(1);
     }
     document.getElementById("sprscreen").innerHTML = Gooble(snake.getScreen()).join("\n").replace(/(.|\s)/g, (a)=>{return palette[a + "HTML"]});
-    // game position = 130,130
-    let sprscrn = snake.getScreen();
-    for (i = [0,0]; i[1] < sprscrn.length; i[1]++) {
-        for (i[0] = 0; i[0] < sprscrn[0].length; i[0]++) {
-            BH.place(Math.random(), 0, 130 + i[0], 130 + i[1], palette[Gooble(sprscrn)[i[1]][i[0]] + "EE"]);
-        }
-    }
 };
-snake = new SnakeGame("dead");
+snake = new SnakeGame([[1, 0], [0, 0]], 10, 10, 180, 80);
+document.getElementById("sprscreen").innerHTML = Gooble(snake.getScreen()).join("\n").replace(/(.|\s)/g, (a)=>{return palette[a + "HTML"]});
 
 if (document.getElementById("controls") !== null) {
     document.getElementById("controls").remove();
 }
-controls = document.getElementsByClassName("menu")[0].childNodes[1].appendChild(document.createElement("tr")).appendChild(document.createElement("td")).appendChild(document.createElement("table")); // what a mess
+controls = menu.appendChild(document.createElement("table")); // what a mess
 var idctrls = document.createAttribute("id");
 idctrls.value = "controls";
 controls.attributes.setNamedItem(idctrls);
@@ -318,9 +315,9 @@ controls.attributes.setNamedItem(idctrls);
 cArrows = [["\u2196", "\u2191", "\u2197"],
            ["\u2190", "\u25CB", "\u2192"],
            ["\u2199", "\u2193", "\u2198"]];
-cRows    = Array(3);
-cCells   = Array(3).fill(Array(3));
-cButtons = Array(3).fill(Array(3).fill(Array(2))); // this is the array staircase. don't trip on the 3rd step!
+cRows = [undefined, undefined, undefined];
+cCells = Array(3).fill(Array(3));
+cButtons = Array(3).fill(Array(3).fill(Array(2)));
 
 function buttonClicked (event) {
     nextFrame(...event.target.id.slice(1).split("y").map((x)=>{return (+x)-1;})); // x1y2 -> [0, 1]
@@ -340,131 +337,6 @@ for (i = [0, 0]; i[1] < 3; i[1]++) {
         cButtons[i[1]][i[0]][0].appendChild(document.createTextNode(cArrows[i[1]][i[0]]));
     }
 };
-
-
-players = {};
-
-connection.addMessageCallback("*", function(m) {
-	switch(m.type) {
-			
-		case "init": {
-		    log("we goin on");
-			width = m.getInt(18);
-            height = m.getInt(19);
-            id = m.getInt(5);
-            smiley = m.getInt(6);
-            
-            playerX = m.getDouble(10) / 16;
-            playerY = m.getDouble(11) / 16;
-            // send "init2"
-            connection.send("init2");
-            BH = new BlockHandler(connection, id, width, height);
-            BH.deserialise(m);
-		} break;
-			
-		case "init2": {
-			log("we on");
-			connection.send("god", true);
-			Move(playerX, playerY);
-			nextFrame(0, 0);
-		} break;
-		
-		case "add": {
-		    players[m.getInt(0)] = [m.getString(2), m.getString(1), Array(5).fill(false), (([66, 106, 146, 186, 226, 266, 306, 346].includes(m.getDouble(4)/16)) && ([16, 45].includes(m.getDouble(5)/16)))];
-		} break;
-		case "left": {
-		    delete players[m.getInt(0)];
-		} break;
-		
-		
-		// Let BH know that things have happened
-		// I only understand half of this code
-		case 'reset': {
-			BH.clearQueue();
-			BH.deserialise(m);
-		} break;
-		case 'clear': {
-			BH.clearQueue();
-			BH.clear(m.getUInt(2), m.getUInt(3));
-		} break;
-		case "b": {
-		    BH.block(m, 0);
-		} break;
-		case 'br': {
-			BH.block(m, 4);
-		} break;
-		case 'bc': case 'bn': case 'bs': case 'lb': case 'pt': case 'ts': case 'wp': {
-			BH.block(m);
-		} break;
-	}
-});
-
-velocity = [0, 0];
-bPressed = [false, false];
-
-window.addEventListener("gamepadconnected", function(e) {
-    gamepads = navigator.getGamepads();
-  console.log("gamer time.");
-});
-
-window.addEventListener("gamepaddisconnected", function(e) {
-    gamepads = navigator.getGamepads();
-  console.log("no more gamer time.");
-});
-
-function readGamepad () {
-    try {
-        if (gamepads[0].buttons[12].pressed) {
-            velocity[1] -= 0.05;
-        }
-        if (gamepads[0].buttons[13].pressed) {
-            velocity[1] += 0.05;
-        }
-        if (gamepads[0].buttons[14].pressed) {
-            velocity[0] -= 0.05;
-        }
-        if (gamepads[0].buttons[15].pressed) {
-            velocity[0] += 0.05;
-        };
-        
-        if (gamepads[0].buttons[2].pressed) {
-            velocity = [((gamepads[0].axes[0]) + (gamepads[0].axes[2])) / 10, ((gamepads[0].axes[1]) + (gamepads[0].axes[3])) / 10];
-        }
-        if (gamepads[0].buttons[3].pressed) {
-            velocity = [((gamepads[0].axes[0]) + (gamepads[0].axes[2])) / 2, ((gamepads[0].axes[1]) + (gamepads[0].axes[3])) / 2];
-        }
-        playerX = Math.max(0, Math.min((playerX + velocity[0]), width));
-        playerY = Math.max(0, Math.min((playerY + velocity[1]), height));
-        if (playerX == 0 || playerX == width) {
-            velocity[0] *= -1;
-            smiley = Math.floor(Math.random() * 4);
-        }
-        if (playerY == 0 || playerY == height) {
-            velocity[1] *= -1;
-            smiley = Math.floor(Math.random() * 4);
-        }
-        if (gamepads[0].buttons[4].pressed && !(bPressed[0])) {
-            smiley = mod((smiley - 1), 4);
-        }
-        if (gamepads[0].buttons[5].pressed && !(bPressed[1])) {
-            smiley = mod((smiley + 1), 4);
-        }
-        bPressed = [gamepads[0].buttons[4].pressed, gamepads[0].buttons[5].pressed];
-        Move(playerX, playerY);
-        if (gamepads[0].buttons[0].pressed) {
-            // do something when a is pressed?
-        }
-        if (gamepads[0].buttons[1].pressed) {
-            // do something when b is pressed?
-        }
-        connection.send("smiley", smiley);
-    } catch(err) {
-    }
-}
-
-function Move(x, y) { // in blocks, only changes X and Y
-    connection.send("m", Math.max(0, Math.min(x, width))*16, Math.max(0, Math.min(y, height))*16, 0, 0, 0, 0, 0, 0, 0, false, false, 0);
-}
-
-log("we gon go on");
-connection.send("init");
+</script>
+</body>
+</html>
