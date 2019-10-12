@@ -1,4 +1,4 @@
-// Remade Snakebot Code - help me
+try {// Remade Snakebot Code - help me
 //
 // ~by 428
 // ~IDE by SirJosh3917/ninjasupeatsninja
@@ -15,7 +15,7 @@
 // to anyone offended by me using mathematical operations (+, -, *) with booleans and being an idiot with strings and regexes, don't look at this code
 var menu = document.getElementsByClassName("menu")[0].childNodes[1];
 if (document.getElementById("sprscreen") !== null) {
-    document.getElementById("sprscreen").parentNode.parentNode.remove();
+    document.getElementById("sprscreen").parentNode.remove();
 }
 menu.appendChild(document.createElement("tr")).innerHTML = "<td id=\"sprscreen\"></td>";
 //menu.innerHTML = menu.innerHTML.replace(/(<tr><td id=\"sprscreen\".*\/tr>)?$/, "<tr><td id=\"sprscreen\"></td></tr>");
@@ -36,14 +36,14 @@ palette = {
     [ "'HTML"]: "<div class='snaketile' style='background-color: #FF0000; width: 4px !important; height: 4px; display: inline-block !important'></div>",
     ["\nHTML"]: "<br>",
     
-    [ " EE"]: 0,
-    [ "!EE"]: 1022,
-    ["\"EE"]: 1088,
-    [ "#EE"]: 143,
-    [ "$EE"]: 14,
-    [ "%EE"]: 74,
-    [ "&EE"]: 12,
-    [ "'EE"]: 70,
+    [ " EE"]: 0,    //no            block
+    [ "!EE"]: 1022, //graey  brick  block
+    ["\"EE"]: 1088, //white  basic  brick
+    [ "#EE"]: 143,  //white  cloud  block
+    [ "$EE"]: 14,   //green  basic  block
+    [ "%EE"]: 74,   //green mineral block
+    [ "&EE"]: 12,   //red   basic   block
+    [ "'EE"]: 70,   //red  mineral  block
 };
 
 SprMap = (s, f) => s.map((r, y, a) => r.map((p, x) => f(p, x, y, a)));
@@ -153,7 +153,95 @@ spr = {
             [2, 2, 2, 2]],
     fruit: [[u, 6, u],
             [6, 6, 6], // fig. 1
-            [u, 6, u]]
+            [u, 6, u]],
+            
+    numbers: [[[3,3,3],
+               [3,u,3], // 0
+               [3,3,3]],
+              
+              [[3,3,u],
+               [u,3,u], // 1
+               [3,3,3]],
+              
+              [[3,3,u],
+               [u,3,u], // 2
+               [u,3,3]],
+              
+              [[3,3,3],
+               [u,3,3], // 3
+               [3,3,3]],
+              
+              [[3,u,3],
+               [3,3,3], // 4
+               [u,u,3]],
+              
+              [[u,3,3],
+               [u,3,u], // 5
+               [3,3,u]],
+              
+              [[3,u,u],
+               [3,3,3], // 6
+               [3,3,3]],
+              
+              [[3,3,3],
+               [u,u,3], // 7
+               [u,u,3]],
+              
+              [[u,3,3],
+               [3,3,3], // 8
+               [3,3,3]],
+              
+              [[3,3,3],
+               [3,3,3], // 9
+               [u,u,3]],],
+    gameOver: deGooble(["########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "######   ###### #### ##### #       #####",
+                        "##### ### #### # ###  ###  # ###########",
+                        "#### ######## ### ## # # # # ###########",
+                        "#### ##    # ##### # ## ## #     #######",
+                        "#### ##### #       # ##### # ###########",
+                        "##### ### ## ##### # ##### # ###########",
+                        "######   ### ##### # ##### #       #####",
+                        "########################################",
+                        "######   ### ##### #       #      ######",
+                        "##### ### ## ##### # ####### ##### #####",
+                        "#### ##### ## ### ## ####### ##### #####",
+                        "#### ##### ## ### ##     ###      ######",
+                        "#### ##### ### # ### ####### ##### #####",
+                        "##### ### #### # ### ####### ##### #####",
+                        "######   ###### ####       # ##### #####",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################",
+                        "########################################"]),
+    
+    scoretxt: deGooble(["    ### ### ### ###  # ",
+                        "     #   #  ### ##     ",
+                        "     #  ### # # ###  # ",
+                        "                       ",
+                        " ## ### ### ### ###  # ",
+                        " #  #   # # #   ##     ",
+                        "##  ### ### #   ###  # "])
 };
 
 (UpdateSnake = function() {
@@ -197,6 +285,26 @@ class SnakeGame {
                 }
             }
         } while (isTouching);
+        this.restart = function (s, w, h) {
+            this.width = w;
+            this.height = h;
+            this.snake = s;
+            this.initLength = this.snake.length;
+            this.score = 0;
+            this.time = 0;
+            this.dead = (this.snake == "dead");
+            this.energy = 2;
+            this.dir = (this.initLength > 1) ? [this.snake[0][0] - this.snake[1][0], this.snake[0][1] - this.snake[1][1]] : [1, 0];
+            isTouching = false;
+            do {
+                this.fruit = [Math.floor(Math.random()*this.width), Math.floor(Math.random()*this.height)];
+                for (i = 0;i < this.snake.length;i++) {
+                    if ((snake[i][0] == this.fruit[0]) && (snake[i][1] == this.fruit[1])) {
+                        isTouching = true;
+                    }
+                }
+            } while (isTouching);
+        };
         this.eat = function () {
             this.score += 1;
             this.energy = Math.min(this.energy + 2, this.initLength + this.score);
@@ -207,12 +315,11 @@ class SnakeGame {
                 isTouching = false;
                 snakeNew.unshift([snakeNew[0][0] + dir[0], snakeNew[0][1] + dir[1]]);
                 let deleteThis;
-                this.energy -= 0.1;
-                this.energy *= 0.95;
-                if (this.energy <= 0) {
-                    this.end();
+                let energyReduce = [0.1, 0.95]; //subtract 1st number and multiply by 2nd number
+                if (dir[0] && dir[1]) {
+                    energyReduce = [0.15, 0.925];
                 }
-                if ((snakeNew[0][0] == this.fruit[0]) && (snakeNew[0][1] == this.fruit[1]) && (snakeNew[2].toString() != snakeNew[0].toString())) {
+                if ((snakeNew[0][0] == this.fruit[0]) && (snakeNew[0][1] == this.fruit[1])) {
                     this.eat();
                 }
                 deleteThis = snakeNew.slice(this.initLength + this.score);
@@ -225,12 +332,15 @@ class SnakeGame {
                     if ((snakeNew[2][0] == snakeNew[0][0]) && (snakeNew[2][1] == snakeNew[0][1])) {
                         snakeNew = this.snake.slice(0);
                         snakeNew.reverse();
-                        if ((snakeNew[0][0] == this.fruit[0]) && (snakeNew[0][1] == this.fruit[1])) {
-                            this.eat();
-                        }
+                        energyReduce = [0.5, 0.9];
                     } else {
                         this.end();
                     }
+                }
+                this.energy -= energyReduce[0];
+                this.energy *= energyReduce[1];
+                if (this.energy <= 0) {
+                    this.end();
                 }
                 if ((this.initLength + this.score) < (this.width * this.height)) {
                     for (var i = 0;i < snakeNew.length;i++) {
@@ -260,22 +370,43 @@ class SnakeGame {
         };
         this.addTime = (t)=>{this.time += t;};
         this.getScreen = function () {
-            let sprscr = Array(40).fill(Array(40).fill(0));
+            let snkscr = spr.gameOver; //snake screen, game over screen used if game not active
+            let scrscr = SprSize(spr.scoretxt, snkscr[0].length, spr.scoretxt.length, 0); //score screen
+            
+            //snake screen code
             if (!this.dead) {
-                sprscr = SprOverlap(sprscr, SprTile(spr.oob, sprscr[0].length, sprscr.length), 0, 0);
-                sprscr = SprOverlap(sprscr, SprTile(spr.board, this.width * 4, this.height * 4), 0, 0);
+                snkscr = SprOverlap(snkscr, SprTile(spr.oob, snkscr[0].length, snkscr.length), 0, 0);
+                snkscr = SprOverlap(snkscr, SprTile(spr.board, this.width * 4, this.height * 4), 0, 0);
                 if (this.fruit[0] != "gone") {
-                    sprscr = SprOverlap(sprscr, spr.fruit, this.fruit[0] * 4, this.fruit[1] * 4); // oh yeah it's big brain time
+                    snkscr = SprOverlap(snkscr, spr.fruit, this.fruit[0] * 4, this.fruit[1] * 4); // oh yeah it's big brain time
                 }
                 for (i = this.snake.length - 1;i > 0;i--) {
-                    sprscr = SprOverlap(sprscr, spr.snake[0][0][this.energy > i], this.snake[i][0] * 4, this.snake[i][1] * 4);
-                    sprscr = SprOverlap(sprscr, spr.snake[0][0][this.energy > (i - 0.25)], (this.snake[i][0] * 3) + this.snake[i-1][0], (this.snake[i][1] * 3) + this.snake[i-1][1]);
-                    sprscr = SprOverlap(sprscr, spr.snake[0][0][this.energy > (i - 0.5)], (this.snake[i-1][0] + this.snake[i][0]) * 2, (this.snake[i-1][1] + this.snake[i][1]) * 2);
-                    sprscr = SprOverlap(sprscr, spr.snake[0][0][this.energy > (i - 0.75)], (this.snake[i-1][0] * 3) + this.snake[i][0], (this.snake[i-1][1] * 3) + this.snake[i][1]);
+                    snkscr = SprOverlap(snkscr, spr.snake[0][0][this.energy > i], this.snake[i][0] * 4, this.snake[i][1] * 4);
+                    snkscr = SprOverlap(snkscr, spr.snake[0][0][this.energy > (i - 0.25)], (this.snake[i][0] * 3) + this.snake[i-1][0], (this.snake[i][1] * 3) + this.snake[i-1][1]);
+                    snkscr = SprOverlap(snkscr, spr.snake[0][0][this.energy > (i - 0.5)], (this.snake[i-1][0] + this.snake[i][0]) * 2, (this.snake[i-1][1] + this.snake[i][1]) * 2);
+                    snkscr = SprOverlap(snkscr, spr.snake[0][0][this.energy > (i - 0.75)], (this.snake[i-1][0] * 3) + this.snake[i][0], (this.snake[i-1][1] * 3) + this.snake[i][1]);
                 }
-                sprscr = SprOverlap(sprscr, spr.snake[0][0][this.energy > 0], this.snake[0][0] * 4, this.snake[0][1] * 4);
-                sprscr = SprOverlap(sprscr, spr.snake[this.dir[1]][this.dir[0]], this.snake[0][0] * 4, this.snake[0][1] * 4);
+                snkscr = SprOverlap(snkscr, spr.snake[0][0][this.energy > 0], this.snake[0][0] * 4, this.snake[0][1] * 4);
+                snkscr = SprOverlap(snkscr, spr.snake[this.dir[1]][this.dir[0]], this.snake[0][0] * 4, this.snake[0][1] * 4);
             }
+            
+            //score screen code
+            i = [this.time, 0];
+            do {
+                scrscr = SprOverlap(scrscr, spr.numbers[mod(i[0], 10)], scrscr[0].length - ((i[1] + 1) * 4), 0);
+                i[1]++;
+                i[0] = Math.floor(i[0] / 10);
+            } while (i[0] >= 1);
+            i = [this.score, 0];
+            do {
+                scrscr = SprOverlap(scrscr, spr.numbers[mod(i[0], 10)], scrscr[0].length - ((i[1] + 1) * 4), 4);
+                i[1]++;
+                i[0] = Math.floor(i[0] / 10);
+            } while (i[0] >= 1);
+            
+            let sprscr = SprSize(snkscr, snkscr[0].length, snkscr.length + 4, 1);
+                sprscr = SprSize(sprscr, sprscr[0].length, sprscr.length + scrscr.length + 1, 0);
+                sprscr = SprOverlap(sprscr, scrscr, 0, 45);
             return sprscr;
         };
         this.end = function () {
@@ -286,8 +417,11 @@ class SnakeGame {
 
 
 nextFrame = (x, y)=>{
+    if (typeof snake == "undefined") {
+        snake = new SnakeGame("dead");
+    }
     if (snake.dead) {
-        snake = new SnakeGame([[1, 0], [0, 0]], 10, 10);
+        snake.restart([[1, 0], [0, 0]], 10, 10);
     } else {
         if (x || y) {
             snake.move([x, y]);
@@ -299,13 +433,14 @@ nextFrame = (x, y)=>{
     document.getElementById("sprscreen").innerHTML = Gooble(snake.getScreen()).join("\n").replace(/(.|\s)/g, (a)=>{return palette[a + "HTML"]});
     // game position = 130,130
     let sprscrn = snake.getScreen();
+    BH.clearQueue();
     for (i = [0,0]; i[1] < sprscrn.length; i[1]++) {
         for (i[0] = 0; i[0] < sprscrn[0].length; i[0]++) {
             BH.place(Math.random(), 0, 130 + i[0], 130 + i[1], palette[Gooble(sprscrn)[i[1]][i[0]] + "EE"]);
         }
     }
 };
-snake = new SnakeGame("dead");
+//snake = new SnakeGame("dead");
 
 if (document.getElementById("controls") !== null) {
     document.getElementById("controls").remove();
@@ -428,13 +563,13 @@ function readGamepad () {
         };
         
         if (gamepads[0].buttons[2].pressed) {
-            velocity = [((gamepads[0].axes[0]) + (gamepads[0].axes[2])) / 10, ((gamepads[0].axes[1]) + (gamepads[0].axes[3])) / 10];
+            velocity = [(gamepads[0].axes[2]) / 10, (gamepads[0].axes[3]) / 10];
         }
         if (gamepads[0].buttons[3].pressed) {
-            velocity = [((gamepads[0].axes[0]) + (gamepads[0].axes[2])) / 2, ((gamepads[0].axes[1]) + (gamepads[0].axes[3])) / 2];
+            velocity = [(gamepads[0].axes[2]) / 2, (gamepads[0].axes[3]) / 2];
         }
-        playerX = Math.max(0, Math.min((playerX + velocity[0]), width));
-        playerY = Math.max(0, Math.min((playerY + velocity[1]), height));
+        playerX = Math.max(0, Math.min((playerX + velocity[0] + (gamepads[0].axes[0] / 3)), width));
+        playerY = Math.max(0, Math.min((playerY + velocity[1] + (gamepads[0].axes[1] / 3)), height));
         if (playerX == 0 || playerX == width) {
             velocity[0] *= -1;
             smiley = Math.floor(Math.random() * 4);
@@ -466,5 +601,12 @@ function Move(x, y) { // in blocks, only changes X and Y
     connection.send("m", Math.max(0, Math.min(x, width))*16, Math.max(0, Math.min(y, height))*16, 0, 0, 0, 0, 0, 0, 0, false, false, 0);
 }
 
+function startUp() {
+    setInterval(()=>{readGamepad()}, 20)
+}
+
 log("we gon go on");
 connection.send("init");
+} catch(err) {
+    console.log(err);
+}
